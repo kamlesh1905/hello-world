@@ -1,10 +1,10 @@
 
 node{
-   stages('SCM checkout')
+   stage('SCM checkout')
    {
        git  'https://github.com/kamlesh1905/hello-world'
     }
-     stages('Compile-Package')
+     stage('Compile-Package')
    {
       def mvnHome = tool name: 'maven', type: 'maven'
       sh "${mvnHome}/opt/maven clean install"
