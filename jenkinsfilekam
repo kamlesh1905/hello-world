@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+
+    tools {
+        // Install the Maven version configured as "M3" and add it to the path.
+        maven "maven-3.9.8"
+    }
+
+    stages {
+        
+        stage('Git Checkout') {
+            steps {
+                
+                git 'https://github.com/kamlesh1905/hello-world.git'
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                // Get some code from a GitHub repository
+                git 'https://github.com/kamlesh1905/hello-world.git'
+
+                // Run Maven on a Unix agent.
+                sh "mvn -Dmaven.test.failure.ignore=true clean package"
+
+                // To run Maven on a Windows agent, use
+                // bat "mvn -Dmaven.test.failure.ignore=true clean package"
+            }
+
+            post {
+                // If Maven was able to run the tests, even if some of the test
+                // failed, record the test results and archive the jar file.
+                success {
+                    junit '**/target/surefire-reports/TEST-*.xml'
+                    archiveArtifacts '**/*.war'
+                }
+            }
+        }
+
+       stage('Archive Artifact') {
+            steps {
+                archiveArtifacts artifacts:'**/*.war'
+            }
+        }
+        
+        stage('Deploy') {
+            steps {
+                deploy adapters: [tomcat9(credentialsId: 'Tomcat', path: '', url: 'http://43.204.101.226:8080/')], contextPath: 'webapp', war: '**/*.war'
+            }
+        }
+    }
+}
