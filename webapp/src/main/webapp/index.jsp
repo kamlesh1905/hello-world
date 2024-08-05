@@ -19,6 +19,10 @@
     <label for="Address"><b>Enter Address</b></label>
     <input type="text" placeholder="Address" name="Address" id="email" required>
     <br>
+ 
+   <label for="Address"><b>Enter second Address</b></label>
+    <input type="text" placeholder="Address" name="Address" id="email" required>
+    <br>
 
     <label for="psw"><b>Password</b></label>
     <input type="password" placeholder="Enter Password" name="psw" id="psw" required>
