@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+
+    tools {
+        // Install the Maven version configured as "M3" and add it to the path.
+        maven "maven-3.9.8"
+    }
+
+    stages {
+        
+        stage('Git Checkout'){
+            steps{
+                git 'https://github.com/kamlesh1905/hello-world.git'
+            }
+        }
+        stage('Build') {
+            steps {
+        
+                // Run Maven on a Unix agent.
+                sh "mvn -Dmaven.test.failure.ignore=true clean package"
+
+                // To run Maven on a Windows agent, use
+                // bat "mvn -Dmaven.test.failure.ignore=true clean package"
+            }
+
+            post {
+                // If Maven was able to run the tests, even if some of the test
+                // failed, record the test results and archive the jar file.
+                success {
+                    junit '**/target/surefire-reports/TEST-*.xml'
+                    archiveArtifacts '**/*.war'
+                }
+            }
+        }
+        stage('Tomcat'){
+            steps{
+               deploy adapters: [tomcat9(credentialsId: 'tomcat', path: '', url: 'http://13.234.30.27:8080/')], contextPath: 'webapp', war: '**/*.war'   
+            }
+        }
+        stage('publish over ssh'){
+            steps{
+                sshPublisher(publishers: [sshPublisherDesc(configName: 'dockerhost', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: '', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '//opt//docker', remoteDirectorySDF: false, removePrefix: 'webapp/target', sourceFiles: 'webapp/target/**/*.war')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
+            }
+        }
+        stage ('Sending artifact to dockerhost over ssh') {
+            steps{
+            sshagent(['dockerhostAgent']) {
+            sh 'ssh -o StrictHostKeyChecking=no dockeradmin@172.31.15.218'
+            sh 'scp /var/lib/jenkins/workspace/GitMavenDeployPublishDockerBuildPipeline/webapp/target/**/*.war dockeradmin@172.31.15.218:/opt/docker'
+        }
+      } 
+    }
+
+  }
+}
+
