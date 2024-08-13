@@ -1,0 +1,28 @@
+pipeline {
+    agent any
+    tools{
+        maven 'maven-3.9.8'
+    }
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/kamlesh1905/hello-world.git']])
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+       stage("Sonarqube Analysis "){
+            steps{
+                script {
+                withSonarQubeEnv(credentialsId: 'sonar-token') {
+                sh 'mvn sonar:sonar'
+                }
+              }
+            }
+       }
+  }
+}
