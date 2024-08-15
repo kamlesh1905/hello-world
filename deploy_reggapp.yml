@@ -3,9 +3,16 @@
   tasks:
   - name: stop container
     command: docker stop registerapp
-
+    ignore_errors: yes
+    
   - name: remove container
     command: docker rm registerapp
+    ignore_errors: yes
+
+  - name: remove image
+    command: docker rmi kamleshmerugu/regapp:latest
+    ignore_errors: yes
 
   - name: create container
     command: docker run -d --name registerapp -p 8080:8080 kamleshmerugu/regapp:latest
+    ignore_errors: yes
