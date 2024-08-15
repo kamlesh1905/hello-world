@@ -1,0 +1,93 @@
+pipeline {
+    agent any
+
+    tools {
+        // Install the Maven version configured as "M3" and add it to the path.
+        maven "maven"
+    }
+
+    stages {
+        stage('Git Checkout'){
+            steps{
+                git 'https://github.com/kamlesh1905/hello-world.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                
+                // Run Maven on a Unix agent.
+                sh "mvn clean package"
+
+                // To run Maven on a Windows agent, use
+                // bat "mvn -Dmaven.test.failure.ignore=true clean package"
+            }
+        }    
+        stage('Deploy to Tomcat'){
+            steps{
+                deploy adapters: [tomcat9(credentialsId: 'tomcat', path: '', url: 'http://13.126.213.152:8080/')], contextPath: 'webapp', war: '**/*.war'
+            }
+        }
+        stage ('Sending docker file to Ansible Server over ssh') {
+            steps{
+           sshagent(['ansiblehost']) {
+           sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.38.42'
+           sh 'scp /var/lib/jenkins/workspace/gitmavendeploypublishsshansibleecpipeline/Dockerfile ec2-user@172.31.38.42:/home/ec2-user'
+          }
+        }
+     }
+     stage ('Sending war file to Ansible Server over ssh') {
+    steps{
+       sshagent(['ansiblehost']) {
+           sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.38.42'
+           sh 'scp /var/lib/jenkins/workspace/gitmavendeploypublishsshansibleecpipeline/webapp/target/webapp.war ec2-user@172.31.38.42:/home/ec2-user'
+       } 
+    }
+}
+
+stage ('Sending regapp file to Ansible Server over ssh') {
+    steps{
+       sshagent(['ansiblehost']) {
+           sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.38.42'
+           sh 'scp /var/lib/jenkins/workspace/gitmavendeploypublishsshansibleecpipeline/regapp.yml ec2-user@172.31.38.42:/home/ec2-user'
+       } 
+    }
+}
+
+stage ('Sending deploy file to Ansible Server over ssh') {
+    steps{
+       sshagent(['ansiblehost']) {
+           sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.38.42'
+           sh 'scp /var/lib/jenkins/workspace/gitmavendeploypublishsshansibleecpipeline/deploy_regapp.yml ec2-user@172.31.38.42:/home/ec2-user'
+       } 
+    }
+  }
+ stage ('Docker Build Image') {
+      steps{
+       sshagent(['ansiblehost']) {
+       sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.38.42 cd /home/ec2-user'
+       sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.38.42 sudo docker image build -t $JOB_NAME:v1.$BUILD_ID -f /home/ec2-user/Dockerfile .'
+       }
+     }
+    }
+
+stage ('Docker Image Tagging') {
+       steps{
+       sshagent(['ansiblehost']) {
+       sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.38.42 cd /home/ec2-user'
+       sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.38.42 sudo docker image tag $JOB_NAME:v1.$BUILD_ID kamleshmerugu/$JOB_NAME:v1.$BUILD_ID'
+	   sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.38.42 sudo docker image tag $JOB_NAME:v1.$BUILD_ID kamleshmerugu/$JOB_NAME:latest'
+        } 
+      }
+    }
+    stage ('Push Docker Image to Docker Hub') {
+      steps{
+       sshagent(['ansiblehost']) {
+                  withCredentials([string(credentialsId: 'dockervariable', variable: 'dockervariable')]) {
+               sh "ssh -o StrictHostKeyChecking=no ec2-user@172.31.38.42 sudo docker login -u kamleshmerugu -p $dockervariable"
+               sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.38.42 sudo docker image push kamleshmerugu/$JOB_NAME:v1.$BUILD_ID'
+         }
+       }
+    }
+   }
+  } 
+}
