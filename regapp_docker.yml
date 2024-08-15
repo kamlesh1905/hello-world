@@ -1,0 +1,14 @@
+---
+- hosts: ansible
+
+  tasks:
+  - name: create docker image
+    command: docker image build -t $JOB_NAME:v1.$BUILD_ID .
+    args:
+      chdir: /home/ec2-user
+
+  - name: create tag to push image onto dockerhub
+    command: sudo docker image tag $JOB_NAME:v1.$BUILD_ID kamleshmerugu/$JOB_NAME:latest
+
+  - name: push docker image
+    command: docker push kamleshmerugu/$JOB_NAME:v1.$BUILD_ID
