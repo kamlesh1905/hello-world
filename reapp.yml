@@ -3,12 +3,12 @@
 
   tasks:
   - name: create docker image
-    command: docker build -t regapp:latest .
+    command: docker build -t  $JOB_NAME:v1.$BUILD_ID .
     args:
       chdir: /opt/docker
 
   - name: create tag to push image onto dockerhub
-    command: docker tag regapp:latest kamleshmerugu/regapp:latest
+    command: docker image tag $JOB_NAME:v1.$BUILD_ID kamleshmerugu/$JOB_NAME:latest
 
   - name: push docker image
-    command: docker push kamleshmerugu/regapp:latest
+    command: docker image push kamleshmerugu/$JOB_NAME:v1.$BUILD_ID
